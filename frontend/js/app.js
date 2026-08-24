@@ -18,6 +18,11 @@ let currentModalRecords = [];
 let chatMessages = [];
 let isChatBotTyping = false;
 
+// Lab Reports Pagination & Cache State
+let cachedPatientReports = [];
+let currentLabPage = 1;
+const LAB_REPORTS_PER_PAGE = 5;
+
 /* =========================================================
    LOCAL STORAGE ACTIVE PATIENT PERSISTENCE
 ========================================================= */
@@ -1553,13 +1558,16 @@ if (labReportForm) {
 async function loadPatientLabReports() {
     const patientId = document.getElementById("results-patient-id").value;
     const container = document.getElementById("lab-reports-container");
+    const paginationContainer = document.getElementById("lab-reports-pagination");
 
     if (!patientId) {
         container.innerHTML = `<p class="field-error-msg visible">Please enter Patient ID.</p>`;
+        if (paginationContainer) paginationContainer.style.display = "none";
         return;
     }
 
     container.innerHTML = "<p>Loading lab reports...</p>";
+    if (paginationContainer) paginationContainer.style.display = "none";
 
     try {
         const response = await fetch(`${API_BASE_URL}/labs/patient/${patientId}`);
@@ -1569,35 +1577,117 @@ async function loadPatientLabReports() {
             throw new Error(reports.detail || "Failed to load lab reports");
         }
 
-        if (reports.length === 0) {
+        if (!Array.isArray(reports) || reports.length === 0) {
+            cachedPatientReports = [];
             container.innerHTML = `
                 <div class="empty-state compact">
-                    <p>No lab reports found.</p>
+                    <p>No lab reports available yet.</p>
                 </div>
             `;
+            if (paginationContainer) paginationContainer.style.display = "none";
             return;
         }
 
-        let html = "";
-        reports.forEach(function(report) {
-            html += `
-                <div class="lab-report-card">
-                    <h3>${report.report_type || "Lab Report"}</h3>
-                    <p><strong>Date:</strong> ${report.report_date || "-"}</p>
-                    <p><strong>Laboratory:</strong> ${report.laboratory_name || "-"}</p>
+        // Sort reports newest -> oldest safely using existing report_date field
+        cachedPatientReports = reports.slice().sort((a, b) => {
+            const timeA = a.report_date ? new Date(a.report_date).getTime() : 0;
+            const timeB = b.report_date ? new Date(b.report_date).getTime() : 0;
+            return (isNaN(timeB) ? 0 : timeB) - (isNaN(timeA) ? 0 : timeA);
+        });
+
+        currentLabPage = 1;
+        renderLabReportsPage(currentLabPage);
+
+    } catch(error) {
+        console.error(error);
+        container.innerHTML = `<p class="field-error-msg visible">Error: ${error.message}</p>`;
+        if (paginationContainer) paginationContainer.style.display = "none";
+    }
+}
+
+function renderLabReportsPage(pageNumber) {
+    const container = document.getElementById("lab-reports-container");
+    const totalReports = cachedPatientReports.length;
+    const totalPages = Math.ceil(totalReports / LAB_REPORTS_PER_PAGE);
+
+    if (pageNumber < 1) pageNumber = 1;
+    if (pageNumber > totalPages && totalPages > 0) pageNumber = totalPages;
+    currentLabPage = pageNumber;
+
+    const startIndex = (currentLabPage - 1) * LAB_REPORTS_PER_PAGE;
+    const endIndex = Math.min(startIndex + LAB_REPORTS_PER_PAGE, totalReports);
+    const paginatedItems = cachedPatientReports.slice(startIndex, endIndex);
+
+    let html = "";
+    paginatedItems.forEach(function(report) {
+        const reportTitle = report.report_type || "Diagnostic Lab Report";
+        const formattedDate = report.report_date ? formatTrendDate(report.report_date) : "Unknown Date";
+        const labName = report.laboratory_name || "Unspecified Laboratory";
+
+        html += `
+            <div class="lab-report-card">
+                <div class="lab-report-header">
+                    <div class="lab-report-avatar" aria-hidden="true">▣</div>
+                    <div class="lab-report-details">
+                        <h3>${escapeHTML(reportTitle)} <span class="lab-report-id-badge">#${report.id}</span></h3>
+                        <div class="lab-report-meta">
+                            <span>📅 ${escapeHTML(formattedDate)}</span>
+                            <span>🏥 ${escapeHTML(labName)}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="lab-report-actions">
                     <button type="button" class="secondary-btn" onclick="loadLabResults(${report.id})">
                         View Results
                     </button>
                 </div>
-            `;
-        });
+            </div>
+        `;
+    });
 
-        container.innerHTML = html;
+    container.innerHTML = html;
+    renderLabPaginationControls(totalPages, totalReports, startIndex + 1, endIndex);
+}
 
-    } catch(error) {
-        console.error(error);
-        container.innerHTML = `<p class="field-error-msg visible">${error.message}</p>`;
+function renderLabPaginationControls(totalPages, totalReports, fromIndex, toIndex) {
+    const paginationContainer = document.getElementById("lab-reports-pagination");
+    if (!paginationContainer) return;
+
+    if (totalReports <= LAB_REPORTS_PER_PAGE) {
+        paginationContainer.style.display = "none";
+        paginationContainer.innerHTML = "";
+        return;
     }
+
+    paginationContainer.style.display = "flex";
+
+    let pagesButtonsHtml = "";
+    for (let i = 1; i <= totalPages; i++) {
+        pagesButtonsHtml += `
+            <button type="button" class="pagination-btn ${i === currentLabPage ? 'active' : ''}" onclick="changeLabReportsPage(${i})">
+                ${i}
+            </button>
+        `;
+    }
+
+    paginationContainer.innerHTML = `
+        <span class="pagination-summary">
+            Showing ${fromIndex}–${toIndex} of ${totalReports} reports
+        </span>
+        <div class="pagination-pages">
+            <button type="button" class="pagination-btn" onclick="changeLabReportsPage(${currentLabPage - 1})" ${currentLabPage === 1 ? 'disabled' : ''}>
+                ‹ Previous
+            </button>
+            ${pagesButtonsHtml}
+            <button type="button" class="pagination-btn" onclick="changeLabReportsPage(${currentLabPage + 1})" ${currentLabPage === totalPages ? 'disabled' : ''}>
+                Next ›
+            </button>
+        </div>
+    `;
+}
+
+function changeLabReportsPage(pageNumber) {
+    renderLabReportsPage(pageNumber);
 }
 
 async function loadLabResults(reportId) {
