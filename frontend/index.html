@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HealthTrack | Patient Health Management</title>
+    <script src="config.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+<!-- =====================================================
+     SIDEBAR
+===================================================== -->
+<aside class="sidebar" id="sidebar" aria-label="Main Navigation">
+    <div class="brand">
+        <div class="brand-icon" aria-hidden="true">❤</div>
+        <div>
+            <h1>HealthTrack</h1>
+            <span>Patient Health System</span>
+        </div>
+    </div>
+
+    <nav class="sidebar-nav">
+        <p class="nav-label">MAIN</p>
+        <button class="nav-item active" data-section="dashboard" type="button">
+            <span class="nav-icon" aria-hidden="true">⌂</span>
+            <span>Dashboard</span>
+        </button>
+        <button class="nav-item" data-section="patients" type="button">
+            <span class="nav-icon" aria-hidden="true">♙</span>
+            <span>Patients</span>
+        </button>
+
+        <p class="nav-label">HEALTH</p>
+        <button class="nav-item" data-section="monitoring" type="button">
+            <span class="nav-icon" aria-hidden="true">♥</span>
+            <span>Monitoring</span>
+        </button>
+        <button class="nav-item" data-section="labs" type="button">
+            <span class="nav-icon" aria-hidden="true">▣</span>
+            <span>Lab Reports</span>
+        </button>
+        <button class="nav-item" data-section="trends" type="button">
+            <span class="nav-icon" aria-hidden="true">↗</span>
+            <span>Lab Trends</span>
+        </button>
+
+        <p class="nav-label">TOOLS</p>
+        <button class="nav-item" data-section="chatbot" type="button">
+            <span class="nav-icon" aria-hidden="true">◉</span>
+            <span>Health Assistant</span>
+        </button>
+    </nav>
+
+    <div class="sidebar-footer">
+        <div class="system-status">
+            <span class="status-dot" aria-hidden="true"></span>
+            <div>
+                <strong>System Online</strong>
+                <small>HealthTrack API</small>
+            </div>
+        </div>
+    </div>
+</aside>
+
+<!-- =====================================================
+     MAIN APPLICATION
+===================================================== -->
+<div class="app">
+
+    <!-- TOP NAVBAR -->
+    <header class="navbar">
+        <div class="navbar-left">
+            <button class="mobile-menu" id="mobile-menu" aria-label="Toggle navigation menu" type="button">☰</button>
+            <div>
+                <h2 id="page-title">Dashboard</h2>
+                <p id="page-subtitle">Patient health overview</p>
+            </div>
+        </div>
+
+        <div class="navbar-right">
+            <div class="active-patient-badge" id="active-patient-badge" role="status" aria-live="polite">
+                <span class="patient-pill-dot" aria-hidden="true"></span>
+                <span id="active-patient-name-display">No Patient Active</span>
+            </div>
+            <div class="api-status">
+                <span class="status-dot" aria-hidden="true"></span>
+                <span>Connected</span>
+            </div>
+            <div class="profile-avatar" aria-label="User Avatar">HT</div>
+        </div>
+    </header>
+
+    <!-- =================================================
+         CONTENT
+    ================================================= -->
+    <main class="main-content">
+
+        <!-- DASHBOARD -->
+        <section class="page-section active" id="section-dashboard" aria-labelledby="dash-heading">
+            <div class="welcome-row">
+                <div>
+                    <span class="eyebrow">HEALTH OVERVIEW</span>
+                    <h1 id="dash-heading">Patient Dashboard</h1>
+                    <p>Real-time clinical vitals, dietary logs, medication tracking, and patient health observations.</p>
+                </div>
+                <div class="header-actions">
+                    <div class="dashboard-patient-picker">
+                        <label for="dashboard-select-id" class="sr-only">Switch Patient by ID</label>
+                        <input type="number" id="dashboard-select-id" placeholder="Patient ID" min="1">
+                        <button class="secondary-btn" type="button" onclick="switchActivePatientById()">Load</button>
+                    </div>
+                    <button class="primary-btn" type="button" onclick="navigateTo('patients')">+ Add Patient</button>
+                </div>
+            </div>
+
+            <div id="dashboard-patient-container" class="dashboard-hero-card">
+                <div class="empty-state">
+                    <div class="empty-icon" aria-hidden="true">♙</div>
+                    <h3>No patient selected</h3>
+                    <p>Enter a Patient ID above or create a new profile to display clinical overview.</p>
+                    <button class="primary-btn" type="button" onclick="navigateTo('patients')">Add Patient</button>
+                </div>
+            </div>
+
+            <div class="stats-grid" id="dashboard-stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon red" aria-hidden="true">♥</div>
+                    <div class="stat-info">
+                        <span class="stat-label">Blood Pressure</span>
+                        <strong id="dash-stat-bp">—</strong>
+                        <small id="dash-stat-bp-time">No reading today</small>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon blue" aria-hidden="true">◎</div>
+                    <div class="stat-info">
+                        <span class="stat-label">O2 Saturation</span>
+                        <strong id="dash-stat-o2">—</strong>
+                        <small id="dash-stat-o2-unit">% SpO2</small>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green" aria-hidden="true">⚡</div>
+                    <div class="stat-info">
+                        <span class="stat-label">Pulse</span>
+                        <strong id="dash-stat-pulse">—</strong>
+                        <small id="dash-stat-pulse-unit">bpm</small>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon orange" aria-hidden="true">🌡</div>
+                    <div class="stat-info">
+                        <span class="stat-label">Temperature</span>
+                        <strong id="dash-stat-temp">—</strong>
+                        <small id="dash-stat-temp-unit">°F</small>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon purple" aria-hidden="true">✦</div>
+                    <div class="stat-info">
+                        <span class="stat-label">Blood Glucose</span>
+                        <strong id="dash-stat-glucose">—</strong>
+                        <small id="dash-stat-glucose-unit">mg/dL</small>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon teal" aria-hidden="true">💧</div>
+                    <div class="stat-info">
+                        <span class="stat-label">Urine Output</span>
+                        <strong id="dash-stat-urine">—</strong>
+                        <small id="dash-stat-urine-unit">ml</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="dashboard-main-col">
+                    <div class="dashboard-card tile-card">
+                        <div class="card-heading">
+                            <div>
+                                <span class="eyebrow">CLINICAL OBSERVATIONS</span>
+                                <h2>Vitals</h2>
+                            </div>
+                            <button class="icon-add-btn" id="btn-add-vitals" type="button" onclick="showInlineEntryRow('vitals')" title="Add Vitals Record" aria-label="Add Vitals Record">+</button>
+                        </div>
+                        <div id="tile-vitals-container" class="table-container">
+                            <div class="empty-state compact"><p>Select or create a patient to view vitals.</p></div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-card tile-card">
+                        <div class="card-heading">
+                            <div>
+                                <span class="eyebrow">NUTRITION LOG</span>
+                                <h2>Food</h2>
+                            </div>
+                            <button class="icon-add-btn" id="btn-add-food" type="button" onclick="showInlineEntryRow('food')" title="Add Food Record" aria-label="Add Food Record">+</button>
+                        </div>
+                        <div id="tile-food-container" class="table-container">
+                            <div class="empty-state compact"><p>Select or create a patient to view nutrition history.</p></div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-card tile-card">
+                        <div class="card-heading">
+                            <div>
+                                <span class="eyebrow">PHARMACOLOGY</span>
+                                <h2>Medicine</h2>
+                            </div>
+                            <button class="icon-add-btn" id="btn-add-medicine" type="button" onclick="showInlineEntryRow('medicine')" title="Add Medicine Record" aria-label="Add Medicine Record">+</button>
+                        </div>
+                        <div id="tile-medicine-container" class="table-container">
+                            <div class="empty-state compact"><p>Select or create a patient to view medication logs.</p></div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-card">
+                        <div class="card-heading">
+                            <div>
+                                <span class="eyebrow">LABORATORY</span>
+                                <h2>Recent Lab Reports</h2>
+                            </div>
+                            <button class="secondary-btn" type="button" onclick="navigateTo('labs')">Manage Labs</button>
+                        </div>
+                        <div id="dashboard-recent-labs" class="dashboard-labs-list">
+                            <div class="empty-state compact"><p>Select or create a patient to view recent lab reports.</p></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-side-col">
+                    <div class="dashboard-card">
+                        <div class="card-heading">
+                            <div>
+                                <span class="eyebrow">SHORTCUTS</span>
+                                <h2>Quick Actions</h2>
+                            </div>
+                        </div>
+                        <div class="quick-actions">
+                            <button onclick="navigateTo('patients')" class="quick-action" type="button">
+                                <span class="quick-icon blue" aria-hidden="true">♙</span>
+                                <div><strong>Add Patient</strong><small>Create new patient record</small></div>
+                                <span aria-hidden="true">→</span>
+                            </button>
+                            <button onclick="navigateTo('monitoring')" class="quick-action" type="button">
+                                <span class="quick-icon green" aria-hidden="true">♥</span>
+                                <div><strong>Record Monitoring</strong><small>Log vitals, meals, and meds</small></div>
+                                <span aria-hidden="true">→</span>
+                            </button>
+                            <button onclick="navigateTo('labs')" class="quick-action" type="button">
+                                <span class="quick-icon purple" aria-hidden="true">▣</span>
+                                <div><strong>Upload Lab Report</strong><small>Analyze PDF/image diagnostics</small></div>
+                                <span aria-hidden="true">→</span>
+                            </button>
+                            <button onclick="navigateTo('labs')" class="quick-action" type="button">
+                                <span class="quick-icon teal" aria-hidden="true">≡</span>
+                                <div><strong>View Lab History</strong><small>Inspect component breakdown</small></div>
+                                <span aria-hidden="true">→</span>
+                            </button>
+                            <button onclick="navigateTo('trends')" class="quick-action" type="button">
+                                <span class="quick-icon orange" aria-hidden="true">↗</span>
+                                <div><strong>View Trends</strong><small>Historical telemetry graphs</small></div>
+                                <span aria-hidden="true">→</span>
+                            </button>
+                            <button onclick="navigateTo('chatbot')" class="quick-action" type="button">
+                                <span class="quick-icon blue" aria-hidden="true">◉</span>
+                                <div><strong>Health Assistant</strong><small>AI-assisted chart review</small></div>
+                                <span aria-hidden="true">→</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PATIENTS -->
+        <section class="page-section" id="section-patients" aria-labelledby="patients-heading">
+            <div class="page-header">
+                <div>
+                    <span class="eyebrow">PATIENT MANAGEMENT</span>
+                    <h1 id="patients-heading">Patients</h1>
+                    <p>Manage patient profiles and register new patient records.</p>
+                </div>
+            </div>
+
+            <div class="content-grid">
+                <div class="content-card" id="patient-profile-card">
+                    <div class="section-heading">
+                        <div class="section-icon green" aria-hidden="true">♙</div>
+                        <div>
+                            <h2>Current Active Patient</h2>
+                            <p>Active patient profile used across telemetry and lab diagnostic tools.</p>
+                        </div>
+                    </div>
+                    <div id="patient-info" aria-live="polite">
+                        <div class="empty-state compact">
+                            <div class="empty-icon" aria-hidden="true">♙</div>
+                            <h3>No patient loaded</h3>
+                            <p>Select a patient or use the registration card below to add a new profile.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="content-card" id="patient-creation-card">
+                    <div class="section-heading">
+                        <div class="section-icon blue" aria-hidden="true">+</div>
+                        <div>
+                            <h2>Add New Patient</h2>
+                            <p>Register a verified profile to begin monitoring vitals and lab data.</p>
+                        </div>
+                    </div>
+
+                    <form id="patient-form" novalidate>
+                        <div class="form-group">
+                            <label for="name">Patient Full Name <span class="req-star">*</span></label>
+                            <input type="text" id="name" name="name" placeholder="e.g. Eleanor Vance" required>
+                            <span class="field-error-msg" id="name-error" role="alert"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="date_of_birth">Date of Birth <span class="req-star">*</span></label>
+                            <input type="date" id="date_of_birth" name="date_of_birth" required>
+                            <span class="field-error-msg" id="dob-error" role="alert"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="gender">Gender <span class="req-star">*</span></label>
+                            <select id="gender" name="gender" required>
+                                <option value="">Select gender</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            <span class="field-error-msg" id="gender-error" role="alert"></span>
+                        </div>
+                        <button type="submit" class="primary-btn full-width" id="patient-submit-btn">
+                            <span class="btn-text">Create Patient Record</span>
+                            <span class="btn-spinner" aria-hidden="true"></span>
+                        </button>
+                    </form>
+                    <div id="patient-message" class="alert-banner" role="status" aria-live="polite"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- MONITORING -->
+        <section class="page-section" id="section-monitoring" aria-labelledby="monitoring-heading">
+            <div class="page-header">
+                <div>
+                    <span class="eyebrow">PATIENT HEALTH</span>
+                    <h1 id="monitoring-heading">Monitoring</h1>
+                    <p>Record, review, and filter patient observations day-by-day.</p>
+                </div>
+            </div>
+
+            <div class="content-card">
+                <div class="section-heading">
+                    <div class="section-icon green" aria-hidden="true">♥</div>
+                    <div>
+                        <h2>New Monitoring Record</h2>
+                        <p>Enter observation values. Timestamp defaults to current date and time.</p>
+                    </div>
+                </div>
+
+                <form id="monitoring-form">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="monitoring-patient-id">Patient ID</label>
+                            <input type="number" id="monitoring-patient-id" placeholder="Enter Patient ID" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="monitoring-time">Observation Time</label>
+                            <input type="datetime-local" id="monitoring-time">
+                        </div>
+                        <div class="form-group">
+                            <label for="monitoring-bp">Blood Pressure</label>
+                            <input type="text" id="monitoring-bp" placeholder="120/80">
+                        </div>
+                        <div class="form-group">
+                            <label for="monitoring-oxygen">O2 Saturation (%)</label>
+                            <input type="number" step="0.1" id="monitoring-oxygen" placeholder="98">
+                        </div>
+                        <div class="form-group">
+                            <label for="monitoring-pulse">Pulse</label>
+                            <input type="number" step="0.1" id="monitoring-pulse" placeholder="72">
+                        </div>
+                        <div class="form-group">
+                            <label for="monitoring-temperature">Temperature</label>
+                            <input type="number" step="0.1" id="monitoring-temperature" placeholder="98.4">
+                        </div>
+                        <div class="form-group">
+                            <label for="monitoring-glucose">Glucose</label>
+                            <input type="number" step="0.1" id="monitoring-glucose" placeholder="95">
+                        </div>
+                        <div class="form-group">
+                            <label for="monitoring-urine">Urine Output (ml)</label>
+                            <input type="number" step="0.1" id="monitoring-urine" placeholder="200">
+                        </div>
+                        <div class="form-group">
+                            <label for="monitoring-food">Food Intake</label>
+                            <input type="text" id="monitoring-food" placeholder="e.g. Rice, soup">
+                        </div>
+                        <div class="form-group">
+                            <label for="monitoring-medicine">Medicine Given</label>
+                            <input type="text" id="monitoring-medicine" placeholder="e.g. Paracetamol 500mg">
+                        </div>
+                    </div>
+                    <button type="submit" class="primary-btn">Save Monitoring Record</button>
+                </form>
+                <div id="monitoring-message" class="alert-banner" role="status" aria-live="polite"></div>
+            </div>
+
+            <div class="content-card">
+                <div class="section-heading">
+                    <div class="section-icon blue" aria-hidden="true">≡</div>
+                    <div>
+                        <h2 id="monitoring-view-heading">Monitoring History</h2>
+                        <p>Use the calendar or step forward/backward to inspect daily patient records.</p>
+                    </div>
+                </div>
+
+                <div class="monitoring-filter-bar">
+                    <div class="form-group patient-id-field">
+                        <label for="history-patient-id">Patient ID</label>
+                        <input type="number" id="history-patient-id" placeholder="Enter Patient ID" oninput="handlePatientIdInput()">
+                    </div>
+
+                    <div class="form-group date-stepper-field">
+                        <label for="monitoring-date-filter">Filter Date</label>
+                        <div class="date-stepper-control">
+                            <button type="button" class="stepper-btn" onclick="stepMonitoringDate(-1)" title="Previous Day" aria-label="Previous Day">‹</button>
+                            <input type="date" id="monitoring-date-filter" onchange="loadMonitoringHistory()">
+                            <button type="button" class="stepper-btn" onclick="stepMonitoringDate(1)" title="Next Day" aria-label="Next Day">›</button>
+                        </div>
+                    </div>
+
+                    <div class="filter-action-group">
+                        <button type="button" class="secondary-btn" onclick="setMonitoringDateToToday()">Today</button>
+                        <button type="button" class="secondary-btn" onclick="setMonitoringDateToAll()">All Dates</button>
+                    </div>
+                </div>
+
+                <div class="monitoring-date-header" id="monitoring-date-header">
+                    <div class="date-header-left">
+                        <span class="date-tag-badge" id="date-view-tag">TODAY</span>
+                        <strong id="date-view-label">Loading date...</strong>
+                    </div>
+                    <span class="record-counter-badge" id="date-record-count">0 records</span>
+                </div>
+
+                <div id="monitoring-history" class="table-container">
+                    <div class="empty-state compact"><p>No monitoring records loaded.</p></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- LABS -->
+        <section class="page-section" id="section-labs" aria-labelledby="labs-heading">
+            <div class="page-header">
+                <div>
+                    <span class="eyebrow">LABORATORY</span>
+                    <h1 id="labs-heading">Lab Reports</h1>
+                    <p>Upload, analyze and review laboratory reports.</p>
+                </div>
+            </div>
+
+            <div class="content-card">
+                <div class="section-heading">
+                    <div class="section-icon purple" aria-hidden="true">▣</div>
+                    <div>
+                        <h2>Upload Lab Report</h2>
+                        <p>Upload PDF or image reports for automated analysis.</p>
+                    </div>
+                </div>
+
+                <form id="lab-report-form">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="lab-patient-id">Patient ID</label>
+                            <input type="number" id="lab-patient-id" placeholder="Enter Patient ID" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="lab-report-date">Report Date</label>
+                            <input type="date" id="lab-report-date">
+                        </div>
+                        <div class="form-group">
+                            <label for="lab-report-type">Report Type</label>
+                            <input type="text" id="lab-report-type" placeholder="Complete Haemogram">
+                        </div>
+                        <div class="form-group">
+                            <label for="lab-laboratory-name">Laboratory Name</label>
+                            <input type="text" id="lab-laboratory-name" placeholder="Laboratory name">
+                        </div>
+                    </div>
+
+                    <div class="upload-box">
+                        <div class="upload-icon" aria-hidden="true">↑</div>
+                        <div>
+                            <label for="lab-file">Upload Lab Report</label>
+                            <input type="file" id="lab-file" accept=".pdf,.jpg,.jpeg,.png" required>
+                            <small>Supported formats: PDF, JPG, JPEG, PNG</small>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="primary-btn">Upload & Analyze Report</button>
+                </form>
+                <div id="lab-message" class="alert-banner" role="status" aria-live="polite"></div>
+            </div>
+
+            <div class="content-card">
+                <div class="section-heading">
+                    <div class="section-icon blue" aria-hidden="true">≡</div>
+                    <div>
+                        <h2>Lab Report History</h2>
+                        <p>Select a report to view its extracted results.</p>
+                    </div>
+                </div>
+
+                <div class="inline-form">
+                    <div class="form-group">
+                        <label for="results-patient-id">Patient ID</label>
+                        <input type="number" id="results-patient-id" placeholder="Enter Patient ID">
+                    </div>
+                    <button type="button" class="secondary-btn" onclick="loadPatientLabReports()">Load Reports</button>
+                </div>
+
+                <div id="lab-reports-container" class="lab-reports-container">
+                    <div class="empty-state compact"><p>No lab reports loaded.</p></div>
+                </div>
+            </div>
+
+            <div class="content-card">
+                <div class="section-heading">
+                    <div class="section-icon green" aria-hidden="true">✓</div>
+                    <div>
+                        <h2>Lab Results</h2>
+                        <p>Extracted laboratory components. Click any parameter row to view its historical trend.</p>
+                    </div>
+                </div>
+
+                <div id="lab-results-container" class="table-container">
+                    <div class="empty-state compact"><p>Select a lab report to view its results.</p></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TRENDS -->
+        <section class="page-section" id="section-trends" aria-labelledby="trends-heading">
+            <div class="page-header">
+                <div>
+                    <span class="eyebrow">HEALTH ANALYTICS</span>
+                    <h1 id="trends-heading">Lab Trends</h1>
+                    <p>Analyze how laboratory values change over time.</p>
+                </div>
+            </div>
+
+            <div class="content-card">
+                <div class="section-heading">
+                    <div class="section-icon orange" aria-hidden="true">↗</div>
+                    <div>
+                        <h2>Historical Lab Trend</h2>
+                        <p>Select a patient and laboratory component.</p>
+                    </div>
+                </div>
+
+                <div class="trend-controls">
+                    <div class="form-group">
+                        <label for="trend-patient-id">Patient ID</label>
+                        <input type="number" id="trend-patient-id" placeholder="Enter Patient ID">
+                    </div>
+                    <div class="form-group">
+                        <label for="trend-component">Lab Component</label>
+                        <input type="text" id="trend-component" placeholder="Example: Haemoglobin">
+                    </div>
+                    <div class="trend-buttons">
+                        <button type="button" class="secondary-btn" onclick="loadLabTrend()">View History</button>
+                        <button type="button" class="primary-btn" onclick="loadLabTrendChart()">View Graph</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-card">
+                <div class="section-heading">
+                    <div class="section-icon blue" aria-hidden="true">≡</div>
+                    <div>
+                        <h2>Historical Results</h2>
+                        <p>Previous values for the selected laboratory component.</p>
+                    </div>
+                </div>
+
+                <div id="lab-trend-container" class="table-container">
+                    <div class="empty-state compact"><p>Enter a Patient ID and component to view historical results.</p></div>
+                </div>
+            </div>
+
+            <div class="content-card">
+                <div class="section-heading">
+                    <div class="section-icon purple" aria-hidden="true">↗</div>
+                    <div>
+                        <h2>Trend Visualization</h2>
+                        <p>Visual representation of laboratory values over time.</p>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <canvas id="lab-trend-chart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- =================================================
+             HEALTH ASSISTANT (AI CHATBOT INTERFACE)
+        ================================================= -->
+        <section class="page-section" id="section-chatbot" aria-labelledby="chatbot-heading">
+            <div class="page-header">
+                <div>
+                    <span class="eyebrow">AI CLINICAL ASSISTANT</span>
+                    <h1 id="chatbot-heading">Health Assistant</h1>
+                    <p>Intelligent assistant for interpreting vitals, monitoring observations, and diagnostic reports.</p>
+                </div>
+            </div>
+
+            <div class="chat-card">
+                <!-- PATIENT CONTEXT HEADER STRIP -->
+                <div class="chat-patient-header">
+                    <div class="chat-patient-meta">
+                        <span class="chat-patient-tag">ACTIVE PATIENT CONTEXT</span>
+                        <div class="chat-patient-details">
+                            <strong id="chat-patient-name">Patient: No patient selected</strong>
+                            <span id="chat-patient-id-badge">Patient ID: —</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MESSAGES STREAM CONTAINER -->
+                <div class="chat-messages-container" id="chat-messages-container">
+                    <!-- Dynamic chat bubbles rendered via JS -->
+                </div>
+
+                <!-- CHAT INPUT COMPOSER -->
+                <form class="chat-input-wrapper" id="chat-input-form" onsubmit="handleSendChatMessage(event)">
+                    <textarea
+                        id="chat-message-input"
+                        placeholder="Type your health observation or clinical question... (Press Enter to send, Shift + Enter for new line)"
+                        rows="1"
+                        onkeydown="handleChatInputKeydown(event)"
+                    ></textarea>
+                    <button type="submit" class="primary-btn chat-send-btn" id="chat-send-btn">
+                        <span class="btn-text">Send</span>
+                        <span class="btn-spinner" aria-hidden="true"></span>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<!-- =====================================================
+     PARAMETER TREND MODAL / POPUP
+===================================================== -->
+<div class="modal-backdrop" id="param-modal-backdrop" onclick="closeParamModal(event)">
+    <div class="modal-card" id="param-modal-card" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <div>
+                <span class="eyebrow">HISTORICAL PARAMETER TREND</span>
+                <h3 id="param-modal-title">Parameter Trend</h3>
+                <small id="param-modal-unit-label" class="modal-unit-text"></small>
+            </div>
+            <button class="modal-close-btn" type="button" onclick="closeParamModal()" title="Close Trend Modal" aria-label="Close Trend Modal">✕</button>
+        </div>
+
+        <div class="modal-filter-bar">
+            <div class="form-group">
+                <label for="param-filter-from">From Date</label>
+                <input type="date" id="param-filter-from" onchange="renderParamModalChart()">
+            </div>
+            <div class="form-group">
+                <label for="param-filter-to">To Date</label>
+                <input type="date" id="param-filter-to" onchange="renderParamModalChart()">
+            </div>
+            <div class="modal-range-display" id="param-modal-range-display"></div>
+        </div>
+
+        <div id="param-modal-chart-wrapper" class="modal-chart-container">
+            <canvas id="param-modal-chart"></canvas>
+        </div>
+
+        <div id="param-modal-msg" class="modal-notice"></div>
+    </div>
+</div>
+
+<div class="sidebar-overlay" id="sidebar-overlay" tabindex="-1"></div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
