@@ -45,11 +45,9 @@ def get_db():
     db = SessionLocal()
 
     try:
-
         yield db
 
     finally:
-
         db.close()
 
 
@@ -67,23 +65,15 @@ def create_lab_report(
 ):
 
     new_report = LabReport(
-
         patient_id=report.patient_id,
-
         report_date=report.report_date,
-
         report_type=report.report_type,
-
         laboratory_name=report.laboratory_name,
-
         file_name=report.file_name
-
     )
 
     db.add(new_report)
-
     db.commit()
-
     db.refresh(new_report)
 
     return new_report
@@ -112,41 +102,26 @@ def add_lab_result(
     )
 
     if not report:
-
         raise HTTPException(
             status_code=404,
             detail="Lab report not found"
         )
 
-
     new_result = LabResult(
-
         lab_report_id=report_id,
-
         component_name=result.component_name,
-
         component_code=result.component_code,
-
         value_numeric=result.value_numeric,
-
         value_text=result.value_text,
-
         unit=result.unit,
-
         reference_range_low=result.reference_range_low,
-
         reference_range_high=result.reference_range_high,
-
         reference_range_text=result.reference_range_text,
-
         flag=result.flag
-
     )
 
     db.add(new_result)
-
     db.commit()
-
     db.refresh(new_result)
 
     return new_result
@@ -166,19 +141,14 @@ def get_patient_lab_reports(
 ):
 
     reports = (
-
         db.query(LabReport)
-
         .filter(
             LabReport.patient_id == patient_id
         )
-
         .order_by(
             LabReport.report_date.desc()
         )
-
         .all()
-
     )
 
     return reports
@@ -198,15 +168,11 @@ def get_lab_results(
 ):
 
     results = (
-
         db.query(LabResult)
-
         .filter(
             LabResult.lab_report_id == report_id
         )
-
         .all()
-
     )
 
     return results
@@ -238,12 +204,10 @@ def upload_lab_report(
     )
 
     if not report:
-
         raise HTTPException(
             status_code=404,
             detail="Lab report not found"
         )
-
 
     # --------------------------------------
     # Allowed file types
@@ -256,14 +220,11 @@ def upload_lab_report(
         ".png"
     ]
 
-
     extension = os.path.splitext(
         file.filename
     )[1].lower()
 
-
     if extension not in allowed_extensions:
-
         raise HTTPException(
             status_code=400,
             detail=(
@@ -272,9 +233,8 @@ def upload_lab_report(
             )
         )
 
-
     # --------------------------------------
-    # Create uploads folder
+    # Create temporary uploads directory
     # --------------------------------------
 
     upload_directory = "uploads"
@@ -284,7 +244,6 @@ def upload_lab_report(
         exist_ok=True
     )
 
-
     # --------------------------------------
     # Create unique filename
     # --------------------------------------
@@ -293,55 +252,45 @@ def upload_lab_report(
         f"report_{report_id}{extension}"
     )
 
-
     file_path = os.path.join(
         upload_directory,
         saved_filename
     )
 
+    # --------------------------------------
+    # Save temporary file
+    # --------------------------------------
+
+    try:
+
+        with open(
+            file_path,
+            "wb"
+        ) as buffer:
+
+            shutil.copyfileobj(
+                file.file,
+                buffer
+            )
+
+    finally:
+
+        file.file.close()
 
     # --------------------------------------
-    # Save file
-    # --------------------------------------
-
-    with open(
-        file_path,
-        "wb"
-    ) as buffer:
-
-        shutil.copyfileobj(
-            file.file,
-            buffer
-        )
-
-
-    # --------------------------------------
-    # Update database
+    # Store temporary filename
     # --------------------------------------
 
     report.file_name = saved_filename
 
     db.commit()
-
     db.refresh(report)
 
-
     return {
-
         "status": "success",
-
-        "message":
-            "Lab report uploaded successfully",
-
-        "report_id":
-            report_id,
-
-        "file_name":
-            saved_filename,
-
-        "file_path":
-            file_path
-
+        "message": "Lab report uploaded successfully",
+        "report_id": report_id,
+        "file_name": saved_filename
     }
 
 
@@ -365,41 +314,32 @@ def extract_lab_report_text(
         .first()
     )
 
-
     if not report:
-
         raise HTTPException(
             status_code=404,
             detail="Lab report not found"
         )
 
-
     if not report.file_name:
-
         raise HTTPException(
             status_code=400,
             detail="No file uploaded for this report"
         )
-
 
     file_path = os.path.join(
         "uploads",
         report.file_name
     )
 
-
     if not os.path.exists(file_path):
-
         raise HTTPException(
             status_code=404,
             detail="Uploaded file not found"
         )
 
-
     extension = Path(
         file_path
     ).suffix.lower()
-
 
     # --------------------------------------
     # PDF text extraction
@@ -413,33 +353,24 @@ def extract_lab_report_text(
             )
         )
 
-
         return {
-
             "status": "success",
-
             "file_type": "pdf",
-
             "text": extracted_text
-
         }
-
 
     # --------------------------------------
     # Images are handled by Gemini
     # --------------------------------------
 
     return {
-
         "status": "success",
-
-        "message":
+        "message": (
             "Image file detected. "
             "Use the analyze endpoint for "
-            "AI extraction.",
-
+            "AI extraction."
+        ),
         "file_type": extension
-
     }
 
 
@@ -467,40 +398,32 @@ def analyze_lab_report(
         .first()
     )
 
-
     if not report:
-
         raise HTTPException(
             status_code=404,
             detail="Lab report not found"
         )
-
 
     # --------------------------------------
     # 2. Check uploaded file
     # --------------------------------------
 
     if not report.file_name:
-
         raise HTTPException(
             status_code=400,
             detail="No file uploaded for this report"
         )
-
 
     file_path = os.path.join(
         "uploads",
         report.file_name
     )
 
-
     if not os.path.exists(file_path):
-
         raise HTTPException(
             status_code=404,
             detail="Uploaded file not found"
         )
-
 
     # --------------------------------------
     # 3. Send report to Gemini
@@ -514,13 +437,16 @@ def analyze_lab_report(
 
     except Exception as e:
 
+        # IMPORTANT:
+        # Keep temporary file if Gemini fails.
+        # This allows retrying analysis.
+
         raise HTTPException(
             status_code=500,
             detail=(
                 f"Gemini analysis failed: {str(e)}"
             )
         )
-
 
     # --------------------------------------
     # 4. Update lab report information
@@ -534,7 +460,6 @@ def analyze_lab_report(
         "laboratory_name"
     )
 
-
     # --------------------------------------
     # 5. Update report date
     # --------------------------------------
@@ -542,7 +467,6 @@ def analyze_lab_report(
     report_date = data.get(
         "report_date"
     )
-
 
     if report_date:
 
@@ -559,7 +483,6 @@ def analyze_lab_report(
 
             report.report_date = None
 
-
     # --------------------------------------
     # 6. Delete previous results
     # --------------------------------------
@@ -570,7 +493,6 @@ def analyze_lab_report(
         synchronize_session=False
     )
 
-
     # --------------------------------------
     # 7. Get Gemini components
     # --------------------------------------
@@ -580,9 +502,7 @@ def analyze_lab_report(
         []
     )
 
-
     inserted_results = []
-
 
     # --------------------------------------
     # 8. Insert components
@@ -594,13 +514,10 @@ def analyze_lab_report(
             "component_name"
         )
 
-
         # Skip invalid components
 
         if not component_name:
-
             continue
-
 
         new_result = LabResult(
 
@@ -637,9 +554,7 @@ def analyze_lab_report(
             flag=component.get(
                 "flag"
             )
-
         )
-
 
         db.add(new_result)
 
@@ -647,16 +562,40 @@ def analyze_lab_report(
             new_result
         )
 
+    # --------------------------------------
+    # 9. Remove temporary uploaded file
+    # --------------------------------------
+
+    try:
+
+        if os.path.exists(file_path):
+
+            os.remove(file_path)
+
+    except Exception as e:
+
+        # Don't fail the entire analysis if
+        # file deletion has an OS-level problem.
+
+        print(
+            f"Warning: Could not delete temporary "
+            f"file {file_path}: {e}"
+        )
 
     # --------------------------------------
-    # 9. Save database changes
+    # 10. Remove filename from database
+    # --------------------------------------
+
+    report.file_name = None
+
+    # --------------------------------------
+    # 11. Save database changes
     # --------------------------------------
 
     db.commit()
 
-
     # --------------------------------------
-    # 10. Return response
+    # 12. Return response
     # --------------------------------------
 
     return {
@@ -677,8 +616,9 @@ def analyze_lab_report(
 
         "components_extracted":
             len(inserted_results)
-
     }
+
+
 # ==========================================
 # GET HISTORICAL TREND FOR LAB COMPONENT
 # ==========================================
@@ -693,7 +633,6 @@ def get_lab_component_trend(
 ):
 
     results = (
-
         db.query(
             LabReport.report_date,
             LabResult.component_name,
@@ -702,34 +641,26 @@ def get_lab_component_trend(
             LabResult.unit,
             LabResult.flag
         )
-
         .join(
             LabResult,
             LabReport.id ==
             LabResult.lab_report_id
         )
-
         .filter(
             LabReport.patient_id == patient_id
         )
-
         .filter(
-    LabResult.component_name.ilike(
-        f"%{component_name}%"
-    )
-)
-
+            LabResult.component_name.ilike(
+                f"%{component_name}%"
+            )
+        )
         .order_by(
             LabReport.report_date.asc()
         )
-
         .all()
-
     )
 
-
     trend = []
-
 
     for result in results:
 
@@ -752,8 +683,6 @@ def get_lab_component_trend(
 
             "flag":
                 result.flag
-
         })
-
 
     return trend

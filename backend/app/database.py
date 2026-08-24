@@ -26,3 +26,4 @@ def get_db():
 
 # Alias for backwards compatibility with existing routers
 get_db_session = get_db
+
