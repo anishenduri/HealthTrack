@@ -2,7 +2,7 @@
    HEALTH TRACK APPLICATION
 ========================================================= */
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = "https://healthtrack-production-baec.up.railway.app";
 const ACTIVE_PATIENT_STORAGE_KEY = "healthtrack_active_patient_id";
 
 let labTrendChart = null;
