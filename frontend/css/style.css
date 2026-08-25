@@ -1809,7 +1809,7 @@ tbody tr:hover {
 }
 
 /* =========================================================
-   RESPONSIVE DESIGN
+   RESPONSIVE DESIGN & MOBILE CARDS
 ========================================================= */
 @media (max-width: 1250px) {
     .stats-grid {
@@ -1893,6 +1893,84 @@ tbody tr:hover {
     .chat-card {
         height: calc(100vh - 180px);
         min-height: 450px;
+    }
+}
+
+@media (max-width: 768px) {
+    /* Transform tabular data into card rows on mobile */
+    .table-container table,
+    .table-container tbody,
+    .table-container tr,
+    .table-container td {
+        display: block;
+        width: 100%;
+    }
+
+    .table-container thead {
+        display: none;
+    }
+
+    .table-container table {
+        min-width: 100% !important;
+    }
+
+    .table-container tbody tr {
+        background: #ffffff;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        margin-bottom: 14px;
+        padding: 8px 14px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+    }
+
+    .table-container tbody tr:last-child {
+        margin-bottom: 0;
+    }
+
+    .table-container td {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px dashed #f1f5f9;
+        font-size: 13px;
+        text-align: right;
+    }
+
+    .table-container td:last-child {
+        border-bottom: none;
+    }
+
+    /* Pulls the column header label from data-label */
+    .table-container td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--muted);
+        text-align: left;
+        margin-right: 12px;
+        font-size: 12px;
+        flex-shrink: 0;
+    }
+
+    .table-container tr.empty-row-placeholder td {
+        display: block;
+        text-align: center;
+        border: none;
+    }
+
+    .table-container tr.empty-row-placeholder td::before {
+        display: none;
+    }
+
+    .inline-edit-row td {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+        text-align: left;
+    }
+
+    .inline-edit-row td input {
+        width: 100%;
     }
 }
 

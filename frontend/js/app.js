@@ -812,16 +812,22 @@ function renderVitalsTile(todayRecords) {
         `;
     } else {
         vitalsRecords.forEach(r => {
+            const tempVal = r.temperature !== null && r.temperature !== undefined ? `${r.temperature}°C` : "—";
+            const o2Val = r.oxygen !== null && r.oxygen !== undefined ? `${r.oxygen}%` : "—";
+            const urineVal = r.urine_output !== null && r.urine_output !== undefined ? `${r.urine_output} ml` : "—";
+
             html += `
                 <tr>
-                    <td>${formatTimeOrDateTime(r.time)}</td>
-                    <td><strong>${formatValue(r.bp)}</strong></td>
-                    <td>${formatValue(r.oxygen)}</td>
-                    <td>${formatValue(r.pulse)}</td>
-                    <td>${formatValue(r.temperature)}</td>
-                    <td>${formatValue(r.glucose)}</td>
-                    <td>${formatValue(r.urine_output)}</td>
-                    <td>—</td>
+                    <td data-label="Time">${formatTimeOrDateTime(r.time)}</td>
+                    <td data-label="BP"><strong>${formatValue(r.bp)}</strong></td>
+                    <td data-label="O2">${o2Val}</td>
+                    <td data-label="Pulse">${formatValue(r.pulse)}</td>
+                    <td data-label="Temp">${tempVal}</td>
+                    <td data-label="Glucose">${formatValue(r.glucose)}</td>
+                    <td data-label="Urine Output">${urineVal}</td>
+                    <td data-label="Action">
+                        <button type="button" class="secondary-btn" style="padding: 3px 8px; font-size: 11px;" onclick="navigateTo('monitoring')">Edit</button>
+                    </td>
                 </tr>
             `;
         });
@@ -875,10 +881,12 @@ function renderFoodTile(todayRecords) {
 
             html += `
                 <tr>
-                    <td>${formatTimeOrDateTime(r.time)}</td>
-                    <td><strong>${formatValue(foodName)}</strong></td>
-                    <td>${formatValue(quantity)}</td>
-                    <td>—</td>
+                    <td data-label="Time">${formatTimeOrDateTime(r.time)}</td>
+                    <td data-label="Food Name"><strong>${formatValue(foodName)}</strong></td>
+                    <td data-label="Quantity">${formatValue(quantity)}</td>
+                    <td data-label="Action">
+                        <button type="button" class="secondary-btn" style="padding: 3px 8px; font-size: 11px;" onclick="navigateTo('monitoring')">Edit</button>
+                    </td>
                 </tr>
             `;
         });
@@ -919,9 +927,11 @@ function renderMedicineTile(todayRecords) {
         medicineRecords.forEach(r => {
             html += `
                 <tr>
-                    <td>${formatTimeOrDateTime(r.time)}</td>
-                    <td><strong>${formatValue(r.medicine_given)}</strong></td>
-                    <td>—</td>
+                    <td data-label="Time">${formatTimeOrDateTime(r.time)}</td>
+                    <td data-label="Medicine Given"><strong>${formatValue(r.medicine_given)}</strong></td>
+                    <td data-label="Action">
+                        <button type="button" class="secondary-btn" style="padding: 3px 8px; font-size: 11px;" onclick="navigateTo('monitoring')">Edit</button>
+                    </td>
                 </tr>
             `;
         });
@@ -999,14 +1009,14 @@ function showInlineEntryRow(tileType) {
         tr.id = "row-inline-vitals";
         tr.className = "inline-edit-row";
         tr.innerHTML = `
-            <td><input type="datetime-local" id="inline-vitals-time" value="${currentLocalTime}"></td>
-            <td><input type="text" id="inline-vitals-bp" placeholder="120/80"></td>
-            <td><input type="number" step="0.1" id="inline-vitals-oxygen" placeholder="98"></td>
-            <td><input type="number" step="0.1" id="inline-vitals-pulse" placeholder="72"></td>
-            <td><input type="number" step="0.1" id="inline-vitals-temp" placeholder="98.4"></td>
-            <td><input type="number" step="0.1" id="inline-vitals-glucose" placeholder="95"></td>
-            <td><input type="number" step="0.1" id="inline-vitals-urine" placeholder="200"></td>
-            <td>
+            <td data-label="Time"><input type="datetime-local" id="inline-vitals-time" value="${currentLocalTime}"></td>
+            <td data-label="BP"><input type="text" id="inline-vitals-bp" placeholder="120/80"></td>
+            <td data-label="O2"><input type="number" step="0.1" id="inline-vitals-oxygen" placeholder="98"></td>
+            <td data-label="Pulse"><input type="number" step="0.1" id="inline-vitals-pulse" placeholder="72"></td>
+            <td data-label="Temp"><input type="number" step="0.1" id="inline-vitals-temp" placeholder="98.4"></td>
+            <td data-label="Glucose"><input type="number" step="0.1" id="inline-vitals-glucose" placeholder="95"></td>
+            <td data-label="Urine Output"><input type="number" step="0.1" id="inline-vitals-urine" placeholder="200"></td>
+            <td data-label="Action">
                 <button type="button" class="row-save-btn" onclick="saveInlineRow('vitals')">Save</button>
                 <button type="button" class="row-cancel-btn" onclick="cancelInlineRow('vitals')">✕</button>
             </td>
@@ -1024,10 +1034,10 @@ function showInlineEntryRow(tileType) {
         tr.id = "row-inline-food";
         tr.className = "inline-edit-row";
         tr.innerHTML = `
-            <td><input type="datetime-local" id="inline-food-time" value="${currentLocalTime}"></td>
-            <td><input type="text" id="inline-food-name" placeholder="e.g. Rice / Apple"></td>
-            <td><input type="text" id="inline-food-quantity" placeholder="e.g. 200 g / 1 piece"></td>
-            <td>
+            <td data-label="Time"><input type="datetime-local" id="inline-food-time" value="${currentLocalTime}"></td>
+            <td data-label="Food Name"><input type="text" id="inline-food-name" placeholder="e.g. Rice / Apple"></td>
+            <td data-label="Quantity"><input type="text" id="inline-food-quantity" placeholder="e.g. 200 g / 1 piece"></td>
+            <td data-label="Action">
                 <button type="button" class="row-save-btn" onclick="saveInlineRow('food')">Save</button>
                 <button type="button" class="row-cancel-btn" onclick="cancelInlineRow('food')">✕</button>
             </td>
@@ -1045,9 +1055,9 @@ function showInlineEntryRow(tileType) {
         tr.id = "row-inline-medicine";
         tr.className = "inline-edit-row";
         tr.innerHTML = `
-            <td><input type="datetime-local" id="inline-medicine-time" value="${currentLocalTime}"></td>
-            <td><input type="text" id="inline-medicine-name" placeholder="e.g. Paracetamol 500mg"></td>
-            <td>
+            <td data-label="Time"><input type="datetime-local" id="inline-medicine-time" value="${currentLocalTime}"></td>
+            <td data-label="Medicine Given"><input type="text" id="inline-medicine-name" placeholder="e.g. Paracetamol 500mg"></td>
+            <td data-label="Action">
                 <button type="button" class="row-save-btn" onclick="saveInlineRow('medicine')">Save</button>
                 <button type="button" class="row-cancel-btn" onclick="cancelInlineRow('medicine')">✕</button>
             </td>
@@ -1381,15 +1391,15 @@ function renderFilteredMonitoringRecords(allRecords, selectedDate) {
     filteredRecords.forEach(function(record) {
         tableHTML += `
             <tr>
-                <td><strong>${formatTimeOrDateTime(record.time)}</strong></td>
-                <td><strong>${formatValue(record.bp)}</strong></td>
-                <td>${formatValue(record.oxygen)}</td>
-                <td>${formatValue(record.pulse)}</td>
-                <td>${formatValue(record.temperature)}</td>
-                <td>${formatValue(record.glucose)}</td>
-                <td>${formatValue(record.urine_output)}</td>
-                <td>${formatValue(record.food_name)}</td>
-                <td>${formatValue(record.medicine_given)}</td>
+                <td data-label="Time"><strong>${formatTimeOrDateTime(record.time)}</strong></td>
+                <td data-label="BP"><strong>${formatValue(record.bp)}</strong></td>
+                <td data-label="O2">${formatValue(record.oxygen)}</td>
+                <td data-label="Pulse">${formatValue(record.pulse)}</td>
+                <td data-label="Temperature">${formatValue(record.temperature)}</td>
+                <td data-label="Glucose">${formatValue(record.glucose)}</td>
+                <td data-label="Urine Output">${formatValue(record.urine_output)}</td>
+                <td data-label="Food">${formatValue(record.food_name)}</td>
+                <td data-label="Medicine">${formatValue(record.medicine_given)}</td>
             </tr>
         `;
     });
@@ -1749,11 +1759,11 @@ async function loadLabResults(reportId) {
 
             html += `
                 <tr class="clickable-param-row ${rowHighlightClass}" onclick="openParamModal('${encodedParam}', '${encodedUnit}', '${encodedLow}', '${encodedHigh}', '${encodedRefText}')" title="Click to view ${formatValue(result.component_name)} trend graph">
-                    <td><strong>${formatValue(result.component_name)}</strong></td>
-                    <td>${displayVal}</td>
-                    <td>${formatValue(result.unit)}</td>
-                    <td>${refRangeDisplay}</td>
-                    <td>
+                    <td data-label="Test Parameter"><strong>${formatValue(result.component_name)}</strong></td>
+                    <td data-label="Result">${displayVal}</td>
+                    <td data-label="Unit">${formatValue(result.unit)}</td>
+                    <td data-label="Reference Range">${refRangeDisplay}</td>
+                    <td data-label="Status">
                         <span class="lab-status ${statusBadgeClass}">${statusDisplay}</span>
                     </td>
                     <td class="param-action-arrow">›</td>
@@ -2053,11 +2063,11 @@ async function loadLabTrend() {
 
             tableHTML += `
                 <tr>
-                    <td>${formatValue(item.report_date)}</td>
-                    <td>${formatValue(item.component_name)}</td>
-                    <td>${value}</td>
-                    <td>${formatValue(item.unit)}</td>
-                    <td>${formatValue(item.flag)}</td>
+                    <td data-label="Date">${formatValue(item.report_date)}</td>
+                    <td data-label="Component">${formatValue(item.component_name)}</td>
+                    <td data-label="Value">${value}</td>
+                    <td data-label="Unit">${formatValue(item.unit)}</td>
+                    <td data-label="Flag">${formatValue(item.flag)}</td>
                 </tr>
             `;
         });
