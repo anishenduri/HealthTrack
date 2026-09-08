@@ -1481,6 +1481,7 @@ if (labReportForm) {
         const reportType = document.getElementById("lab-report-type").value;
         const laboratoryName = document.getElementById("lab-laboratory-name").value;
         const fileInput = document.getElementById("lab-file");
+        const submitBtn = labReportForm.querySelector("button[type='submit']");
 
         if (!patientId) {
             setFormBannerMessage("lab-message", "Please enter Patient ID.", "error");
@@ -1492,7 +1493,17 @@ if (labReportForm) {
             return;
         }
 
+        // Cache the file reference before resetting the field
         const file = fileInput.files[0];
+
+        // Instantly clear the file input to remove the file name from display
+        fileInput.value = "";
+
+        // Provide immediate visual feedback to indicate processing
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = "Uploading & Analyzing...";
+        }
 
         try {
             setFormBannerMessage("lab-message", "Creating lab report...", "info");
@@ -1549,6 +1560,9 @@ if (labReportForm) {
 
             setFormBannerMessage("lab-message", `Analysis complete. ${analysis.components_extracted} components extracted.`, "success");
 
+            // Reset the remaining form inputs
+            labReportForm.reset();
+
             await loadLabResults(reportId);
 
             document.getElementById("results-patient-id").value = patientId;
@@ -1561,6 +1575,11 @@ if (labReportForm) {
         } catch(error) {
             console.error(error);
             setFormBannerMessage("lab-message", "Error: " + error.message, "error");
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = "Upload & Analyze Report";
+            }
         }
     });
 }
