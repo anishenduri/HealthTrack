@@ -1,3 +1,4 @@
+backend/healthtrack.db
 
 # Environment / secrets
 .env
