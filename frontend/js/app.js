@@ -966,7 +966,7 @@ function updateDashboardLabReports(todayReports) {
                     <h4>${report.report_type || "Diagnostic Lab Report"}</h4>
                     <span>${report.laboratory_name || "Lab"} • ${report.report_date ? formatTrendDate(report.report_date) : "Today"}</span>
                 </div>
-                <button class="secondary-btn" type="button" onclick="navigateTo('labs'); loadLabResults(${report.id});">
+                <button class="secondary-btn" type="button" onclick="navigateTo('labs'); handleViewLabResults(${report.id});">
                     View Results
                 </button>
             </div>
@@ -1216,7 +1216,9 @@ if (monitoringForm) {
         }
 
         function getValue(id) {
-            const value = document.getElementById(id).value;
+            const el = document.getElementById(id);
+            if (!el) return null;
+            const value = el.value;
             return value === "" ? null : value;
         }
 
@@ -1261,6 +1263,22 @@ if (monitoringForm) {
             }
 
             setFormBannerMessage("monitoring-message", "Monitoring record saved successfully.", "success");
+
+            // RESET ONLY MEASUREMENT FIELDS - KEEP PATIENT ID & OBSERVATION TIME
+            const fieldsToClear = [
+                "monitoring-bp",
+                "monitoring-oxygen",
+                "monitoring-pulse",
+                "monitoring-temperature",
+                "monitoring-glucose",
+                "monitoring-urine",
+                "monitoring-food",
+                "monitoring-medicine"
+            ];
+            fieldsToClear.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = "";
+            });
 
             document.getElementById("history-patient-id").value = patientId;
 
@@ -1409,11 +1427,68 @@ function renderFilteredMonitoringRecords(allRecords, selectedDate) {
 }
 
 /* =========================================================
-   REFERENCE RANGE PARSING & RESULT CLASSIFICATION
+   REFERENCE RANGE PARSING & PARAMETER STANDARDS
 ========================================================= */
 
+// Known clinical standard reference ranges for typical laboratory components
+const CLINICAL_REFERENCE_STANDARDS = {
+    "haemoglobin": { low: 12.0, high: 17.5, unit: "g/dL" },
+    "hemoglobin": { low: 12.0, high: 17.5, unit: "g/dL" },
+    "hb": { low: 12.0, high: 17.5, unit: "g/dL" },
+    "wbc": { low: 4000, high: 11000, unit: "cells/mcL" },
+    "rbc": { low: 4.2, high: 5.9, unit: "million/mcL" },
+    "platelets": { low: 150000, high: 450000, unit: "cells/mcL" },
+    "glucose": { low: 70, high: 100, unit: "mg/dL" },
+    "fasting glucose": { low: 70, high: 100, unit: "mg/dL" },
+    "blood sugar": { low: 70, high: 100, unit: "mg/dL" },
+    "creatinine": { low: 0.6, high: 1.3, unit: "mg/dL" },
+    "urea": { low: 15, high: 45, unit: "mg/dL" },
+    "blood urea nitrogen": { low: 7, high: 20, unit: "mg/dL" },
+    "bun": { low: 7, high: 20, unit: "mg/dL" },
+    "cholesterol": { low: 120, high: 200, unit: "mg/dL" },
+    "total cholesterol": { low: 120, high: 200, unit: "mg/dL" },
+    "triglycerides": { low: 40, high: 150, unit: "mg/dL" },
+    "hdl": { low: 40, high: 60, unit: "mg/dL" },
+    "ldl": { low: 50, high: 100, unit: "mg/dL" },
+    "bilirubin": { low: 0.2, high: 1.2, unit: "mg/dL" },
+    "total bilirubin": { low: 0.2, high: 1.2, unit: "mg/dL" },
+    "sgot": { low: 10, high: 40, unit: "U/L" },
+    "ast": { low: 10, high: 40, unit: "U/L" },
+    "sgpt": { low: 7, high: 56, unit: "U/L" },
+    "alt": { low: 7, high: 56, unit: "U/L" },
+    "potassium": { low: 3.5, high: 5.1, unit: "mEq/L" },
+    "sodium": { low: 135, high: 145, unit: "mEq/L" },
+    "calcium": { low: 8.5, high: 10.5, unit: "mg/dL" },
+    "uric acid": { low: 3.5, high: 7.2, unit: "mg/dL" },
+    "tsh": { low: 0.4, high: 4.5, unit: "uIU/mL" },
+    "esr": { low: 0, high: 20, unit: "mm/hr" },
+    "hba1c": { low: 4.0, high: 5.6, unit: "%" }
+};
+
+function resolveParameterReferenceLimits(componentName, rawLow, rawHigh, rawText) {
+    const parsed = parseReferenceLimits(rawLow, rawHigh, rawText);
+    if (parsed && (parsed.low !== null || parsed.high !== null)) {
+        return parsed;
+    }
+
+    if (componentName) {
+        const cleanName = componentName.trim().toLowerCase();
+        for (const [key, standard] of Object.entries(CLINICAL_REFERENCE_STANDARDS)) {
+            if (cleanName === key || cleanName.includes(key)) {
+                return {
+                    low: standard.low,
+                    high: standard.high,
+                    rawText: `${standard.low} - ${standard.high}`
+                };
+            }
+        }
+    }
+
+    return parsed || { low: null, high: null, rawText: null };
+}
+
 function parseReferenceLimits(lowVal, highVal, textVal) {
-    if (lowVal !== null && lowVal !== undefined && highVal !== null && highVal !== undefined) {
+    if (lowVal !== null && lowVal !== undefined && highVal !== null && highVal !== undefined && lowVal !== "" && highVal !== "") {
         return { low: Number(lowVal), high: Number(highVal), rawText: `${lowVal} - ${highVal}` };
     }
 
@@ -1562,7 +1637,6 @@ if (labReportForm) {
             document.getElementById("lab-report-type").value = "";
             document.getElementById("lab-laboratory-name").value = "";
 
-            // Automatically sync patient ID to the results field and active patient state
             document.getElementById("results-patient-id").value = patientId;
 
             if (!activePatient || Number(activePatient.id) !== Number(patientId)) {
@@ -1593,7 +1667,6 @@ if (labReportForm) {
     });
 }
 
-// Keep lab-patient-id and results-patient-id synced if typed manually
 const labPatientInput = document.getElementById("lab-patient-id");
 if (labPatientInput) {
     labPatientInput.addEventListener("change", async function() {
@@ -1605,6 +1678,24 @@ if (labPatientInput) {
             }
         }
     });
+}
+
+// Navigation + Direct Loading of Results
+async function handleViewLabResults(reportId) {
+    if (!reportId) return;
+
+    const currentActiveSection = Array.from(sections).find(s => s.classList.contains("active"));
+    if (!currentActiveSection || currentActiveSection.id !== "section-labs") {
+        navigateTo("labs");
+    }
+
+    await loadLabResults(reportId);
+
+    const resultsCard = document.getElementById("lab-results-container");
+    if (resultsCard) {
+        const targetElement = resultsCard.closest(".content-card") || resultsCard;
+        targetElement.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
 }
 
 async function loadPatientLabReports() {
@@ -1680,7 +1771,7 @@ function renderLabReportsList() {
                     </div>
                 </div>
                 <div class="lab-report-actions">
-                    <button type="button" class="secondary-btn" onclick="loadLabResults(${report.id})">
+                    <button type="button" class="secondary-btn" onclick="handleViewLabResults(${report.id})">
                         View Results
                     </button>
                 </div>
@@ -1734,11 +1825,16 @@ async function loadLabResults(reportId) {
             let textVal = (result.value_text !== null && result.value_text !== undefined) ? result.value_text : null;
             let displayVal = numericVal !== null ? numericVal : (textVal !== null ? textVal : "—");
 
-            const parsedLimits = parseReferenceLimits(result.reference_range_low, result.reference_range_high, result.reference_range_text);
+            const parsedLimits = resolveParameterReferenceLimits(
+                result.component_name,
+                result.reference_range_low,
+                result.reference_range_high,
+                result.reference_range_text
+            );
             const statusKey = evaluateResultStatus(numericVal, textVal, parsedLimits, result.flag);
             const statusDisplay = statusKey.toUpperCase();
 
-            let refRangeDisplay = parsedLimits ? parsedLimits.rawText : "—";
+            let refRangeDisplay = (parsedLimits && parsedLimits.rawText) ? parsedLimits.rawText : "—";
             let statusBadgeClass = `status-${statusKey}`;
             let rowHighlightClass = (statusKey === "low" || statusKey === "high" || statusKey === "positive" || statusKey === "abnormal") ? `row-abnormal-${statusKey}` : "";
 
@@ -1938,7 +2034,7 @@ function renderParamModalChart() {
         datasets.push({
             label: `Upper Limit (${currentModalParam.refHigh})`,
             data: new Array(labels.length).fill(currentModalParam.refHigh),
-            borderColor: "rgba(220, 38, 38, 0.4)",
+            borderColor: "rgba(220, 38, 38, 0.6)",
             borderDash: [5, 5],
             pointRadius: 0,
             fill: false
@@ -1949,7 +2045,7 @@ function renderParamModalChart() {
         datasets.push({
             label: `Lower Limit (${currentModalParam.refLow})`,
             data: new Array(labels.length).fill(currentModalParam.refLow),
-            borderColor: "rgba(220, 38, 38, 0.4)",
+            borderColor: "rgba(220, 38, 38, 0.6)",
             borderDash: [5, 5],
             pointRadius: 0,
             fill: false
@@ -2099,12 +2195,84 @@ async function loadLabTrendChart() {
             return;
         }
 
+        // Determine reference range from data or clinical standards
+        let lowVal = null;
+        let highVal = null;
+        for (const item of data) {
+            if (item.reference_range_low !== null && item.reference_range_low !== undefined) lowVal = Number(item.reference_range_low);
+            if (item.reference_range_high !== null && item.reference_range_high !== undefined) highVal = Number(item.reference_range_high);
+            if (lowVal !== null && highVal !== null) break;
+            const parsed = parseReferenceLimits(item.reference_range_low, item.reference_range_high, item.reference_range_text);
+            if (parsed && (parsed.low !== null || parsed.high !== null)) {
+                lowVal = parsed.low;
+                highVal = parsed.high;
+                break;
+            }
+        }
+
+        if (lowVal === null && highVal === null) {
+            const fallback = resolveParameterReferenceLimits(component, null, null, null);
+            if (fallback) {
+                lowVal = fallback.low;
+                highVal = fallback.high;
+            }
+        }
+
         const labels = data.map(item => formatTrendDate(item.report_date));
         const values = data.map(item => {
-            if (item.value !== null && item.value !== undefined) return Number(item.value);
-            if (item.value_numeric !== null && item.value_numeric !== undefined) return Number(item.value_numeric);
+            if (item.value !== null && item.value !== undefined && !isNaN(Number(item.value))) return Number(item.value);
+            if (item.value_numeric !== null && item.value_numeric !== undefined && !isNaN(Number(item.value_numeric))) return Number(item.value_numeric);
             return null;
         });
+
+        // Color coding: Low/High in Red (#dc2626), Normal in Primary Blue (#2563eb)
+        const pointColors = data.map((item, idx) => {
+            const val = values[idx];
+            const flag = item.flag ? String(item.flag).toLowerCase() : "";
+            if (flag === "low" || flag === "high" || flag === "abnormal" || flag === "positive") {
+                return "#dc2626";
+            }
+            if (val !== null) {
+                if (lowVal !== null && val < lowVal) return "#dc2626";
+                if (highVal !== null && val > highVal) return "#dc2626";
+            }
+            return "#2563eb";
+        });
+
+        const datasets = [{
+            label: component,
+            data: values,
+            borderColor: "#2563eb",
+            backgroundColor: "rgba(37, 99, 235, 0.08)",
+            tension: 0.3,
+            fill: true,
+            pointBackgroundColor: pointColors,
+            pointBorderColor: pointColors,
+            pointRadius: 6,
+            pointHoverRadius: 8
+        }];
+
+        if (highVal !== null) {
+            datasets.push({
+                label: `Upper Reference Limit (${highVal})`,
+                data: new Array(labels.length).fill(highVal),
+                borderColor: "rgba(220, 38, 38, 0.6)",
+                borderDash: [5, 5],
+                pointRadius: 0,
+                fill: false
+            });
+        }
+
+        if (lowVal !== null) {
+            datasets.push({
+                label: `Lower Reference Limit (${lowVal})`,
+                data: new Array(labels.length).fill(lowVal),
+                borderColor: "rgba(220, 38, 38, 0.6)",
+                borderDash: [5, 5],
+                pointRadius: 0,
+                fill: false
+            });
+        }
 
         const canvas = document.getElementById("lab-trend-chart");
         const ctx = canvas.getContext("2d");
@@ -2117,16 +2285,7 @@ async function loadLabTrendChart() {
             type: "line",
             data: {
                 labels: labels,
-                datasets: [{
-                    label: component,
-                    data: values,
-                    borderColor: "#2563eb",
-                    backgroundColor: "rgba(37, 99, 235, 0.08)",
-                    tension: 0.3,
-                    fill: true,
-                    pointRadius: 5,
-                    pointHoverRadius: 7
-                }]
+                datasets: datasets
             },
             options: {
                 responsive: true,
@@ -2138,10 +2297,11 @@ async function loadLabTrendChart() {
                 plugins: {
                     title: {
                         display: true,
-                        text: `${component} - Historical Trend`
+                        text: `${component} - Historical Trend with Reference Limits`
                     },
                     legend: {
-                        display: true
+                        display: true,
+                        position: "top"
                     }
                 },
                 scales: {
