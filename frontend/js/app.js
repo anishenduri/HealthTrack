@@ -2,7 +2,6 @@
    HEALTH TRACK APPLICATION
 ========================================================= */
 
-
 const API_BASE_URL = "https://healthtrack-tnqj.onrender.com";
 const ACTIVE_PATIENT_STORAGE_KEY = "healthtrack_active_patient_id";
 
@@ -19,10 +18,8 @@ let currentModalRecords = [];
 let chatMessages = [];
 let isChatBotTyping = false;
 
-// Lab Reports Pagination & Cache State
+// Lab Reports Cache State
 let cachedPatientReports = [];
-let currentLabPage = 1;
-const LAB_REPORTS_PER_PAGE = 5;
 
 /* =========================================================
    LOCAL STORAGE ACTIVE PATIENT PERSISTENCE
@@ -218,6 +215,18 @@ function navigateTo(sectionName) {
         }
     }
 
+    if (sectionName === "labs" && activePatient && activePatient.id) {
+        const labPatientInput = document.getElementById("lab-patient-id");
+        const resultsPatientInput = document.getElementById("results-patient-id");
+        if (labPatientInput && !labPatientInput.value) {
+            labPatientInput.value = activePatient.id;
+        }
+        if (resultsPatientInput) {
+            resultsPatientInput.value = activePatient.id;
+        }
+        loadPatientLabReports();
+    }
+
     if (sectionName === "chatbot") {
         updateChatbotPatientContext();
         scrollChatToBottom();
@@ -324,9 +333,15 @@ function setActivePatient(patient) {
     if (patient) {
         refreshDashboardData();
         loadMonitoringHistory();
+        loadPatientLabReports();
     } else {
         resetDashboardVitals();
         cachedMonitoringRecords = [];
+        cachedPatientReports = [];
+        const container = document.getElementById("lab-reports-container");
+        if (container) {
+            container.innerHTML = `<div class="empty-state compact"><p>No lab reports loaded.</p></div>`;
+        }
     }
 }
 
@@ -655,7 +670,6 @@ async function refreshDashboardData() {
             const allRecords = await response.json();
             cachedMonitoringRecords = allRecords;
 
-            // Strict Filter: Include ONLY observations whose actual timestamp date is TODAY
             const todayMonitoringRecords = (allRecords || []).filter(r => {
                 return extractDateFromTimestamp(r.time) === todayISO;
             });
@@ -677,7 +691,6 @@ async function refreshDashboardData() {
         if (labResponse.ok) {
             const allReports = await labResponse.json();
 
-            // Strict Filter: Include ONLY lab reports whose actual report_date is TODAY
             const todayLabReports = (allReports || []).filter(rep => {
                 return extractDateFromTimestamp(rep.report_date) === todayISO;
             });
@@ -702,7 +715,6 @@ function updateDashboardVitalsAndObservations(todayRecords) {
         return;
     }
 
-    // 1. Blood Pressure: Separate Systolic and Diastolic Averages
     let systolicSum = 0;
     let diastolicSum = 0;
     let bpCount = 0;
@@ -728,7 +740,6 @@ function updateDashboardVitalsAndObservations(todayRecords) {
         document.getElementById("dash-stat-bp-time").textContent = "No reading today";
     }
 
-    // 2. Generic Numeric Field Averaging Helper
     function calculateFieldAverage(fieldName, precision = 1) {
         let sum = 0;
         let count = 0;
@@ -746,23 +757,18 @@ function updateDashboardVitalsAndObservations(todayRecords) {
         return precision === 0 ? Math.round(avg) : Number(avg.toFixed(precision));
     }
 
-    // 3. O2 Saturation
     const avgO2 = calculateFieldAverage("oxygen", 1);
     document.getElementById("dash-stat-o2").textContent = avgO2 !== null ? avgO2 : "—";
 
-    // 4. Pulse
     const avgPulse = calculateFieldAverage("pulse", 1);
     document.getElementById("dash-stat-pulse").textContent = avgPulse !== null ? avgPulse : "—";
 
-    // 5. Temperature
     const avgTemp = calculateFieldAverage("temperature", 1);
     document.getElementById("dash-stat-temp").textContent = avgTemp !== null ? avgTemp : "—";
 
-    // 6. Blood Glucose
     const avgGlucose = calculateFieldAverage("glucose", 1);
     document.getElementById("dash-stat-glucose").textContent = avgGlucose !== null ? avgGlucose : "—";
 
-    // 7. Urine Output
     const avgUrine = calculateFieldAverage("urine_output", 1);
     document.getElementById("dash-stat-urine").textContent = avgUrine !== null ? avgUrine : "—";
 }
@@ -777,7 +783,6 @@ function renderDashboardTiles(todayRecords) {
     renderMedicineTile(todayRecords);
 }
 
-/* 1. VITALS TILE */
 function renderVitalsTile(todayRecords) {
     const container = document.getElementById("tile-vitals-container");
     if (!container) return;
@@ -838,7 +843,6 @@ function renderVitalsTile(todayRecords) {
     container.innerHTML = html;
 }
 
-/* 2. FOOD TILE */
 function renderFoodTile(todayRecords) {
     const container = document.getElementById("tile-food-container");
     if (!container) return;
@@ -897,7 +901,6 @@ function renderFoodTile(todayRecords) {
     container.innerHTML = html;
 }
 
-/* 3. MEDICINE TILE */
 function renderMedicineTile(todayRecords) {
     const container = document.getElementById("tile-medicine-container");
     if (!container) return;
@@ -941,10 +944,6 @@ function renderMedicineTile(todayRecords) {
     html += `</tbody></table>`;
     container.innerHTML = html;
 }
-
-/* =========================================================
-   DASHBOARD LAB REPORTS (TODAY ONLY)
-========================================================= */
 
 function updateDashboardLabReports(todayReports) {
     const labContainer = document.getElementById("dashboard-recent-labs");
@@ -1477,7 +1476,8 @@ if (labReportForm) {
     labReportForm.addEventListener("submit", async function(event) {
         event.preventDefault();
 
-        const patientId = document.getElementById("lab-patient-id").value;
+        const patientIdInput = document.getElementById("lab-patient-id");
+        const patientId = patientIdInput ? patientIdInput.value.trim() : "";
         const reportDate = document.getElementById("lab-report-date").value;
         const reportType = document.getElementById("lab-report-type").value;
         const laboratoryName = document.getElementById("lab-laboratory-name").value;
@@ -1494,13 +1494,9 @@ if (labReportForm) {
             return;
         }
 
-        // Cache the file reference before resetting the field
         const file = fileInput.files[0];
-
-        // Instantly clear the file input to remove the file name from display
         fileInput.value = "";
 
-        // Provide immediate visual feedback to indicate processing
         if (submitBtn) {
             submitBtn.disabled = true;
             submitBtn.textContent = "Uploading & Analyzing...";
@@ -1561,12 +1557,24 @@ if (labReportForm) {
 
             setFormBannerMessage("lab-message", `Analysis complete. ${analysis.components_extracted} components extracted.`, "success");
 
-            // Reset the remaining form inputs
-            labReportForm.reset();
+            // Clear secondary fields only; keep the Patient ID retained
+            document.getElementById("lab-report-date").value = "";
+            document.getElementById("lab-report-type").value = "";
+            document.getElementById("lab-laboratory-name").value = "";
+
+            // Automatically sync patient ID to the results field and active patient state
+            document.getElementById("results-patient-id").value = patientId;
+
+            if (!activePatient || Number(activePatient.id) !== Number(patientId)) {
+                const profile = await fetchPatientProfile(Number(patientId));
+                if (profile) {
+                    setActivePatient(profile);
+                } else {
+                    saveActivePatientId(patientId);
+                }
+            }
 
             await loadLabResults(reportId);
-
-            document.getElementById("results-patient-id").value = patientId;
             await loadPatientLabReports();
 
             if (activePatient && Number(activePatient.id) === Number(patientId)) {
@@ -1585,19 +1593,33 @@ if (labReportForm) {
     });
 }
 
+// Keep lab-patient-id and results-patient-id synced if typed manually
+const labPatientInput = document.getElementById("lab-patient-id");
+if (labPatientInput) {
+    labPatientInput.addEventListener("change", async function() {
+        const idVal = this.value.trim();
+        if (idVal && (!activePatient || Number(activePatient.id) !== Number(idVal))) {
+            const profile = await fetchPatientProfile(Number(idVal));
+            if (profile) {
+                setActivePatient(profile);
+            }
+        }
+    });
+}
+
 async function loadPatientLabReports() {
     const patientId = document.getElementById("results-patient-id").value;
     const container = document.getElementById("lab-reports-container");
     const paginationContainer = document.getElementById("lab-reports-pagination");
 
+    if (paginationContainer) paginationContainer.style.display = "none";
+
     if (!patientId) {
         container.innerHTML = `<p class="field-error-msg visible">Please enter Patient ID.</p>`;
-        if (paginationContainer) paginationContainer.style.display = "none";
         return;
     }
 
     container.innerHTML = "<p>Loading lab reports...</p>";
-    if (paginationContainer) paginationContainer.style.display = "none";
 
     try {
         const response = await fetch(`${API_BASE_URL}/labs/patient/${patientId}`);
@@ -1614,42 +1636,33 @@ async function loadPatientLabReports() {
                     <p>No lab reports available yet.</p>
                 </div>
             `;
-            if (paginationContainer) paginationContainer.style.display = "none";
             return;
         }
 
-        // Sort reports newest -> oldest safely using existing report_date field
+        // Sort reports: newest first based on report_date and fallback to report ID
         cachedPatientReports = reports.slice().sort((a, b) => {
             const timeA = a.report_date ? new Date(a.report_date).getTime() : 0;
             const timeB = b.report_date ? new Date(b.report_date).getTime() : 0;
-            return (isNaN(timeB) ? 0 : timeB) - (isNaN(timeA) ? 0 : timeA);
+            if (timeB !== timeA && !isNaN(timeB) && !isNaN(timeA)) {
+                return timeB - timeA;
+            }
+            return (b.id || 0) - (a.id || 0);
         });
 
-        currentLabPage = 1;
-        renderLabReportsPage(currentLabPage);
+        renderLabReportsList();
 
     } catch(error) {
         console.error(error);
         container.innerHTML = `<p class="field-error-msg visible">Error: ${error.message}</p>`;
-        if (paginationContainer) paginationContainer.style.display = "none";
     }
 }
 
-function renderLabReportsPage(pageNumber) {
+function renderLabReportsList() {
     const container = document.getElementById("lab-reports-container");
-    const totalReports = cachedPatientReports.length;
-    const totalPages = Math.ceil(totalReports / LAB_REPORTS_PER_PAGE);
-
-    if (pageNumber < 1) pageNumber = 1;
-    if (pageNumber > totalPages && totalPages > 0) pageNumber = totalPages;
-    currentLabPage = pageNumber;
-
-    const startIndex = (currentLabPage - 1) * LAB_REPORTS_PER_PAGE;
-    const endIndex = Math.min(startIndex + LAB_REPORTS_PER_PAGE, totalReports);
-    const paginatedItems = cachedPatientReports.slice(startIndex, endIndex);
+    if (!container) return;
 
     let html = "";
-    paginatedItems.forEach(function(report) {
+    cachedPatientReports.forEach(function(report) {
         const reportTitle = report.report_type || "Diagnostic Lab Report";
         const formattedDate = report.report_date ? formatTrendDate(report.report_date) : "Unknown Date";
         const labName = report.laboratory_name || "Unspecified Laboratory";
@@ -1676,48 +1689,6 @@ function renderLabReportsPage(pageNumber) {
     });
 
     container.innerHTML = html;
-    renderLabPaginationControls(totalPages, totalReports, startIndex + 1, endIndex);
-}
-
-function renderLabPaginationControls(totalPages, totalReports, fromIndex, toIndex) {
-    const paginationContainer = document.getElementById("lab-reports-pagination");
-    if (!paginationContainer) return;
-
-    if (totalReports <= LAB_REPORTS_PER_PAGE) {
-        paginationContainer.style.display = "none";
-        paginationContainer.innerHTML = "";
-        return;
-    }
-
-    paginationContainer.style.display = "flex";
-
-    let pagesButtonsHtml = "";
-    for (let i = 1; i <= totalPages; i++) {
-        pagesButtonsHtml += `
-            <button type="button" class="pagination-btn ${i === currentLabPage ? 'active' : ''}" onclick="changeLabReportsPage(${i})">
-                ${i}
-            </button>
-        `;
-    }
-
-    paginationContainer.innerHTML = `
-        <span class="pagination-summary">
-            Showing ${fromIndex}–${toIndex} of ${totalReports} reports
-        </span>
-        <div class="pagination-pages">
-            <button type="button" class="pagination-btn" onclick="changeLabReportsPage(${currentLabPage - 1})" ${currentLabPage === 1 ? 'disabled' : ''}>
-                ‹ Previous
-            </button>
-            ${pagesButtonsHtml}
-            <button type="button" class="pagination-btn" onclick="changeLabReportsPage(${currentLabPage + 1})" ${currentLabPage === totalPages ? 'disabled' : ''}>
-                Next ›
-            </button>
-        </div>
-    `;
-}
-
-function changeLabReportsPage(pageNumber) {
-    renderLabReportsPage(pageNumber);
 }
 
 async function loadLabResults(reportId) {
@@ -2296,7 +2267,6 @@ async function handleSendChatMessage(event) {
     const userText = input.value.trim();
     if (!userText || isChatBotTyping) return;
 
-    // 1. Append and render User message immediately
     chatMessages.push({
         sender: "user",
         text: userText,
@@ -2312,7 +2282,6 @@ async function handleSendChatMessage(event) {
     }
     renderChatMessages();
 
-    // 2. Query backend POST /chatbot/ask
     try {
         const response = await fetch(`${API_BASE_URL}/chatbot/ask`, {
             method: "POST",

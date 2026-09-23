@@ -1302,13 +1302,36 @@ tbody tr:hover {
 }
 
 /* =========================================================
-   LAB REPORT HISTORY CARDS & PAGINATION
+   LAB REPORT HISTORY CARDS & SCROLL CONTAINER
 ========================================================= */
 .lab-reports-container {
     display: flex;
     flex-direction: column;
     gap: 12px;
     margin-top: 14px;
+    max-height: 380px; /* Accommodates up to 4 report cards cleanly */
+    overflow-y: auto;
+    padding-right: 4px;
+    scroll-behavior: smooth;
+}
+
+/* Clear, subtle scrollbar for reports history */
+.lab-reports-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.lab-reports-container::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+}
+
+.lab-reports-container::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+.lab-reports-container::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
 }
 
 .lab-report-card {
@@ -1897,7 +1920,6 @@ tbody tr:hover {
 }
 
 @media (max-width: 768px) {
-    /* Transform tabular data into card rows on mobile */
     .table-container table,
     .table-container tbody,
     .table-container tr,
@@ -1941,7 +1963,6 @@ tbody tr:hover {
         border-bottom: none;
     }
 
-    /* Pulls the column header label from data-label */
     .table-container td::before {
         content: attr(data-label);
         font-weight: 600;
