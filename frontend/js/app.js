@@ -272,17 +272,23 @@ function closeMobileSidebar() {
 ========================================================= */
 
 async function fetchPatientProfile(patientId) {
-    if (!patientId || isNaN(Number(patientId))) return null;
+    if (!patientId || isNaN(Number(patientId))) {
+        return { success: false, notFound: true, data: null };
+    }
     try {
         const response = await fetch(`${API_BASE_URL}/patients/${patientId}`);
         if (response.ok) {
             const data = await response.json();
-            return data;
+            return { success: true, notFound: false, data: data };
+        } else if (response.status === 404) {
+            return { success: false, notFound: true, data: null };
+        } else {
+            return { success: false, notFound: false, data: null };
         }
     } catch (e) {
         console.error(`Failed to fetch patient profile for ID ${patientId}:`, e);
+        return { success: false, notFound: false, data: null, error: e };
     }
-    return null;
 }
 
 function setActivePatient(patient) {
@@ -353,27 +359,68 @@ async function switchActivePatientById() {
     }
 
     const patientId = Number(input.value);
-    const profile = await fetchPatientProfile(patientId);
+    const result = await fetchPatientProfile(patientId);
 
-    if (profile) {
-        setActivePatient(profile);
-    } else {
+    if (result && result.success && result.data) {
+        setActivePatient(result.data);
+    } else if (result && result.notFound) {
         alert(`Patient #${patientId} not found in database.`);
-        clearActivePatientId();
-        setActivePatient(null);
+        if (activePatient && Number(activePatient.id) === patientId) {
+            clearActivePatientId();
+            setActivePatient(null);
+        } else if (activePatient) {
+            input.value = activePatient.id;
+        } else {
+            const savedId = getSavedActivePatientId();
+            input.value = savedId ? savedId : "";
+        }
+    } else {
+        alert(`Unable to load Patient #${patientId} at this time. Please check network connection.`);
+        if (activePatient) {
+            input.value = activePatient.id;
+        } else {
+            const savedId = getSavedActivePatientId();
+            input.value = savedId ? savedId : "";
+        }
     }
 }
 
 async function restoreActivePatientFromStorage() {
     const savedId = getSavedActivePatientId();
     if (savedId) {
-        const profile = await fetchPatientProfile(savedId);
-        if (profile) {
-            setActivePatient(profile);
+        const dashInput = document.getElementById("dashboard-select-id");
+        if (dashInput) {
+            dashInput.value = savedId;
+        }
+
+        const result = await fetchPatientProfile(savedId);
+        if (result && result.success && result.data) {
+            setActivePatient(result.data);
             return;
-        } else {
+        } else if (result && result.notFound) {
             clearActivePatientId();
             setActivePatient(null);
+        } else {
+            console.warn(`Backend request temporarily failed during startup for Patient #${savedId}. Keeping saved patient ID.`);
+            const fields = [
+                "monitoring-patient-id",
+                "history-patient-id",
+                "trend-patient-id",
+                "lab-patient-id",
+                "results-patient-id"
+            ];
+            fields.forEach(id => {
+                const el = document.getElementById(id);
+                if (el && !el.value) {
+                    el.value = savedId;
+                }
+            });
+            const badgeName = document.getElementById("active-patient-name-display");
+            const badgeContainer = document.getElementById("active-patient-badge");
+            if (badgeName && badgeContainer) {
+                badgeName.textContent = `Patient ID #${savedId} (Connecting...)`;
+                badgeContainer.className = "active-patient-badge id-only";
+            }
         }
     } else {
         setActivePatient(null);
@@ -1640,9 +1687,9 @@ if (labReportForm) {
             document.getElementById("results-patient-id").value = patientId;
 
             if (!activePatient || Number(activePatient.id) !== Number(patientId)) {
-                const profile = await fetchPatientProfile(Number(patientId));
-                if (profile) {
-                    setActivePatient(profile);
+                const profileResult = await fetchPatientProfile(Number(patientId));
+                if (profileResult && profileResult.success && profileResult.data) {
+                    setActivePatient(profileResult.data);
                 } else {
                     saveActivePatientId(patientId);
                 }
@@ -1672,9 +1719,9 @@ if (labPatientInput) {
     labPatientInput.addEventListener("change", async function() {
         const idVal = this.value.trim();
         if (idVal && (!activePatient || Number(activePatient.id) !== Number(idVal))) {
-            const profile = await fetchPatientProfile(Number(idVal));
-            if (profile) {
-                setActivePatient(profile);
+            const profileResult = await fetchPatientProfile(Number(idVal));
+            if (profileResult && profileResult.success && profileResult.data) {
+                setActivePatient(profileResult.data);
             }
         }
     });
